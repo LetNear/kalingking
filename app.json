@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "WithGoogleAuth",
-    "slug": "WithGoogleAuth",
-    "scheme": "WithGoogleAuth",
+    "name": "GoogleAuth",
+    "slug": "googleauth",
+    "scheme": "googleauth",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,15 +20,16 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.lalamban.WithGoogleAuth"
+      "package": "com.lalamban.googleauth"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "c37d8ef2-3509-44d2-b6cb-b20516259aeb"
+        "projectId": "9de241b5-4341-47e7-a44f-9f373f0bd1f0"
       }
-    }
+    },
+    "owner": "lalamban"
   }
 }

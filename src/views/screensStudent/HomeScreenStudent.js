@@ -1,3 +1,4 @@
+// Existing imports remain the same
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
@@ -15,6 +16,7 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Add new state for student data
 const HomeScreenStudent = ({ navigation }) => {
   const [userDetails, setUserDetails] = useState(null);
   const [selectedButton, setSelectedButton] = useState('Overview');
@@ -34,18 +36,21 @@ const HomeScreenStudent = ({ navigation }) => {
   const [labGuidelines, setLabGuidelines] = useState([]); 
   const [enrolmentKey, setEnrolmentKey] = useState('');
   const [selectedSubject, setSelectedSubject] = useState(null); 
+  const [studentData, setStudentData] = useState(null); // New state to hold fetched student data
 
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    getUserData();
+    getUserData(); // Fetch user data on component mount
     fetchLabGuidelines();
+    fetchStudentData(); // Fetch data from the student API
 
-    const intervalId = setInterval(() => {
+    // Fetch data and update current time every second
+    const fetchInterval = setInterval(() => {
       fetchData();
     }, 1000);
 
-    const timeIntervalId = setInterval(() => {
+    const timeInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
@@ -64,9 +69,10 @@ const HomeScreenStudent = ({ navigation }) => {
       ])
     ).start();
 
+    // Cleanup intervals on component unmount
     return () => {
-      clearInterval(intervalId);
-      clearInterval(timeIntervalId);
+      clearInterval(fetchInterval);
+      clearInterval(timeInterval);
     };
   }, []);
 
@@ -80,12 +86,39 @@ const HomeScreenStudent = ({ navigation }) => {
 
   const getUserData = async () => {
     try {
-      const userData = await AsyncStorage.getItem('studentData');
+      // Ensure the key used here matches the one used when storing the data
+      const userData = await AsyncStorage.getItem('userData');
       if (userData) {
-        setUserDetails(JSON.parse(userData));
+        const parsedData = JSON.parse(userData);
+        console.log('Retrieved Student Data:', parsedData); // Log to confirm correct retrieval
+        setUserDetails(parsedData);
+      } else {
+        console.log("No user data found in AsyncStorage for student.");
       }
     } catch (error) {
       console.error('Failed to load user data', error);
+    }
+  };
+
+  // New function to fetch student data from API and compare with stored user data
+  const fetchStudentData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (!userData) return;
+
+      const storedUser = JSON.parse(userData);
+      const response = await axios.get('https://lockup.pro/api/student-subjects');
+      const students = response.data;
+
+      // Find the student data that matches the stored user ID
+      const matchedStudent = students.find(student => student.id === storedUser.id);
+
+      if (matchedStudent) {
+        console.log('Matched Student Data:', matchedStudent);
+        setStudentData(matchedStudent);
+      }
+    } catch (error) {
+      console.error('Error fetching student data:', error);
     }
   };
 
@@ -199,7 +232,7 @@ const HomeScreenStudent = ({ navigation }) => {
       >
         {guideline.image ? (
           <Image 
-            source={{ uri: `https://lockup.pro/storage/${guideline.image}` }} // Construct the full URL with the image path
+            source={{ uri: `https://lockup.pro/storage/${guideline.image}` }} 
             style={styles.scrollBoxImage}
           />
         ) : (
@@ -208,7 +241,6 @@ const HomeScreenStudent = ({ navigation }) => {
           </View>
         )}
         <Text style={styles.scrollBoxText}>{guideline.title}</Text>
-        
       </TouchableOpacity>
     ));
   };
@@ -224,6 +256,23 @@ const HomeScreenStudent = ({ navigation }) => {
               {renderLabGuidelines()} 
             </ScrollView>
             <Text style={styles.subTitleText}>Access Course</Text>
+
+            {/* Display student subjects if student data exists */}
+            {studentData && studentData.subjects.length > 0 && (
+              <View style={styles.subjectContainer}>
+                {studentData.subjects.map((subject) => (
+                  <View key={subject.id} style={styles.courseDetail}>
+                    <Text style={styles.subjectTitle}>Name: {subject.name}</Text>
+                    <Text>Code: {subject.code}</Text>
+                    <Text>Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}</Text>
+                    <Text>Section: {subject.section}</Text>
+                    <Text>Day: {subject.day}</Text>
+                    <Text>School Year: {subject.school_year}</Text>
+                    <Text>Semester: {subject.semester}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </ScrollView>
         );
       case 'People':
@@ -323,7 +372,7 @@ const HomeScreenStudent = ({ navigation }) => {
         return;
       }
 
-      const userData = await AsyncStorage.getItem('studentData');
+      const userData = await AsyncStorage.getItem('userData');
 
       if (!userData) {
         Alert.alert('Error', 'User not found in storage.');
@@ -368,7 +417,8 @@ const HomeScreenStudent = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.welcomeText}>Welcome, </Text>
-        <Text style={styles.nameText}>{userDetails?.name || 'User'}</Text>
+        {/* Display the name or username based on what's available in the user data */}
+        <Text style={styles.nameText}>{userDetails?.name || userDetails?.username || 'User'}</Text>
       </View>
       <View style={styles.navbar}>
         <TouchableOpacity
@@ -460,6 +510,7 @@ const HomeScreenStudent = ({ navigation }) => {
   );
 };
 
+// Existing styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -522,8 +573,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   scrollBox: {
-    width: 160, // Fixed width for consistency
-    height: 140, // Fixed height for consistency
+    width: 160,
+    height: 140,
     backgroundColor: '#f9f9f9',
     borderRadius: 10,
     marginRight: 10,
@@ -534,14 +585,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '70%',
     borderRadius: 10,
-    resizeMode: 'cover', // To maintain aspect ratio and cover the area
+    resizeMode: 'cover',
   },
   noImageBox: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ddd', // Optional background color for no image
+    backgroundColor: '#ddd',
     borderRadius: 10,
   },
   noImageText: {
@@ -710,12 +761,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   subTitleText: {
-    fontSize: 20,         // Adjust the size for the subtitle look
-    fontWeight: 'bold',   // Make it stand out as a subtitle
-    color: '#333',        // Consistent color
-    marginBottom: 10,     // Space before the content
-    marginTop: 5,        // Space between this subtitle and previous content
-    textAlign: 'left',    // Align the subtitle to the left
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    marginTop: 5,
+    textAlign: 'left',
+  },
+  courseDetail: {
+    backgroundColor: '#f2f2f2',
+    padding: 10,
+    borderRadius: 8,
+    marginVertical: 5,
   },
 });
 

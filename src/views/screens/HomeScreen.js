@@ -28,14 +28,14 @@ const HomeScreen = ({ navigation }) => {
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    getUserData();
-    fetchData();
+    getUserData();  // Get user data on mount
+    fetchData();    // Fetch subject/instructor data on mount
     const intervalId = setInterval(fetchData, 1000);
-
     const timeIntervalId = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
+    // Add animation loop for any UI effects (optional)
     Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -67,9 +67,13 @@ const HomeScreen = ({ navigation }) => {
 
   const getUserData = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
+      const userData = await AsyncStorage.getItem('userData'); // Ensure 'userData' is the key used here
       if (userData) {
-        setUserDetails(JSON.parse(userData));
+        const parsedData = JSON.parse(userData);
+        console.log('User Details:', parsedData); // Log to confirm correct parsing
+        setUserDetails(parsedData);
+      } else {
+        console.log("No user data found in AsyncStorage.");
       }
     } catch (error) {
       console.error('Failed to load user data', error);
@@ -79,7 +83,6 @@ const HomeScreen = ({ navigation }) => {
   const saveCurrentSchedule = async (subject) => {
     try {
       if (subject) {
-        // Ensure the instructor name is included in the subject data
         const subjectWithInstructor = {
           ...subject,
           instructorName: subjectInstructorMap[subject.id]?.instructorName || 'Unknown Instructor',
@@ -92,7 +95,6 @@ const HomeScreen = ({ navigation }) => {
       console.error('Failed to save schedule data', error);
     }
   };
-  
 
   const fetchData = async () => {
     try {
@@ -131,6 +133,18 @@ const HomeScreen = ({ navigation }) => {
       const filteredSubjects = fetchedSubjects.filter(subject => subjectIds.includes(subject.id));
       setMatchedSubjects(filteredSubjects);
       setInstructorSubjectMap(instructorSubjectMap);
+      setLoading(false);
+    } catch (error) {
+      setError(error);
+      setLoading(false);
+    }
+  };
+
+  const fetchInstructors = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('https://lockup.pro/api/instructors');
+      setInstructors(response.data.data || []);
       setLoading(false);
     } catch (error) {
       setError(error);
@@ -256,8 +270,19 @@ const HomeScreen = ({ navigation }) => {
             ))}
           </ScrollView>
         );
-      case 'People':
-        return <Text style={styles.contentText}>People Screen Content</Text>;
+        case 'People':
+  return (
+    <ScrollView style={styles.scrollableContainer}>
+      {instructors
+        .filter(instructor => instructor.id !== userDetails?.id) // Filter out the logged-in instructor
+        .map(instructor => (
+          <View key={instructor.id} style={styles.instructorContainer}>
+            <Text style={styles.instructorNameText}>{instructor.username}</Text>
+          </View>
+        ))}
+    </ScrollView>
+  );
+
       default:
         return <Text style={styles.contentText}>Welcome to Home Screen</Text>;
     }
@@ -267,6 +292,7 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.welcomeText}>Welcome, </Text>
+        {/* Display username if available, else show 'User' */}
         <Text style={styles.nameText}>{userDetails?.username || 'User'}</Text>
       </View>
       <View style={styles.navbar}>
@@ -278,7 +304,10 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navButton, selectedButton === 'People' && styles.selectedButton]}
-          onPress={() => setSelectedButton('People')}
+          onPress={() => {
+            setSelectedButton('People');
+            fetchInstructors(); // Fetch instructors when People is selected
+          }}
         >
           <Text style={[styles.navButtonText, selectedButton === 'People' && styles.selectedButtonText]}>People</Text>
         </TouchableOpacity>
@@ -472,6 +501,17 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 18,
     color: '#666',
+  },
+  instructorContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  instructorNameText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
   },
 });
 

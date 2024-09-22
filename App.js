@@ -7,7 +7,9 @@ import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerI
 import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CommonActions } from '@react-navigation/native';
+import axios from 'axios';
 
+// Import your screens
 import HomeScreen from "./src/views/screens/HomeScreen";
 import RegistrationScreen from "./src/views/screens/RegistrationScreen";
 import LoginScreen from "./src/views/screensStudent/LoginScreen";
@@ -23,7 +25,8 @@ import UnlinkSubjectScreen from "./src/views/screens/UnlinkSubjectScreen";
 import QrScanWithUser from "./src/views/screensStudent/QrScanWithUser";
 import ScanningChoice from "./src/views/screensStudent/ScanningChoice";
 import VerifyPin from "./src/views/screens/VerifyPin";
-
+import ChangePin from "./src/views/screens/ChangePin";
+import ChangePinScreen from "./src/views/screens/ChangePinScreen";
 
 // Define Navigators
 const Stack = createNativeStackNavigator();
@@ -135,7 +138,9 @@ function StudentTabNavigator() {
 // Custom Drawer Content
 function CustomDrawerContent(props) {
   const [userName, setUserName] = React.useState('User');
-  const [userEmail, setUserEmail] = React.useState('');
+  const [userEmail, setUserEmail] = React.useState('No email available');
+  const [profilePic, setProfilePic] = React.useState('https://via.placeholder.com/100'); // Default profile pic
+  const [subjects, setSubjects] = React.useState([]); // State to hold subjects
 
   React.useEffect(() => {
     const fetchUserData = async () => {
@@ -143,15 +148,46 @@ function CustomDrawerContent(props) {
         const userData = await AsyncStorage.getItem('userData');
         if (userData) {
           const parsedData = JSON.parse(userData);
-          if (parsedData.loggedIn) {
-            setUserName(parsedData.fullname || 'User');
-            setUserEmail(parsedData.email || '');
+          if (parsedData) {
+            setUserName(parsedData.name || parsedData.username || 'User');
+            setUserEmail(parsedData.email || 'No email available');
+            setProfilePic(parsedData.picture || 'https://via.placeholder.com/100');
+            if (parsedData.role === 'student') {
+              // Fetch subjects if the user is a student
+              fetchStudentSubjects(parsedData.id);
+            } else {
+              // Fetch subjects if the user is an instructor
+              fetchInstructorSubjects(parsedData.id);
+            }
           }
         }
       } catch (error) {
         console.error("Failed to fetch user data:", error);
       }
     };
+
+    // Function to fetch subjects for students
+    const fetchStudentSubjects = async (userId) => {
+      try {
+        const response = await axios.get('https://lockup.pro/api/student-subjects');
+        const userSubjects = response.data.find(student => student.id === userId)?.subjects || [];
+        setSubjects(userSubjects); // Set the fetched subjects for the student
+      } catch (error) {
+        console.error('Failed to fetch student subjects:', error);
+      }
+    };
+
+    // Function to fetch subjects for instructors
+    const fetchInstructorSubjects = async (userId) => {
+      try {
+        const response = await axios.get('https://lockup.pro/api/instructors-subs-linked');
+        const instructorSubjects = response.data.find(instructor => instructor.id === userId)?.subjects || [];
+        setSubjects(instructorSubjects); // Set the fetched subjects for the instructor
+      } catch (error) {
+        console.error('Failed to fetch instructor subjects:', error);
+      }
+    };
+
     fetchUserData();
   }, []);
 
@@ -176,11 +212,28 @@ function CustomDrawerContent(props) {
   return (
     <DrawerContentScrollView {...props}>
       <View style={styles.drawerHeader}>
-        <Image source={{ uri: 'https://via.placeholder.com/100' }} style={{ width: 100, height: 100, borderRadius: 50 }} />
-        <Text style={styles.drawerHeaderText}>{userName}</Text>
+        <Image 
+          source={{ uri: profilePic }} 
+          style={{ width: 100, height: 100, borderRadius: 50 }}
+        />
+        <Text style={styles.drawerHeaderText}>{userName}</Text> 
         <Text style={styles.drawerEmailText}>{userEmail}</Text>
       </View>
       <DrawerItemList {...props} />
+
+      {/* Display the subjects associated with the user */}
+      <View style={styles.subjectsContainer}>
+        <Text style={styles.subjectsHeader}>My Courses</Text>
+        {subjects.map(subject => (
+          <View key={subject.id} style={styles.subjectItem}>
+            <Icon name="graduation-cap" size={18} color="#1E88E5" />
+            <Text style={styles.subjectText}>
+              {subject.name} - {subject.code} ({subject.day}, {subject.start_time} - {subject.end_time})
+            </Text>
+          </View>
+        ))}
+      </View>
+
       <DrawerItem
         label="Log out"
         icon={({ color, size }) => (
@@ -192,6 +245,8 @@ function CustomDrawerContent(props) {
     </DrawerContentScrollView>
   );
 }
+
+
 
 // Instructor Drawer Navigator
 function DrawerNavigator() {
@@ -224,6 +279,16 @@ function DrawerNavigator() {
           title: 'Mail',
           drawerIcon: ({ color, size }) => (
             <Icon name="envelope" color={color} size={size} />
+          ),
+        }}
+      />
+    <Drawer.Screen 
+        name="ChangePin" 
+        component={ChangePin} 
+        options={{ 
+          title: 'Change Pin',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="key" color={color} size={size} />
           ),
         }}
       />
@@ -322,12 +387,22 @@ function App() {
           component={UnlockScreen}
           options={{ headerShown: false }}
         />
-        
+        <Stack.Screen
+          name="ChangePin"
+          component={ChangePin}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChangePinScreen"
+          component={ChangePinScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   tabBarStyle: {
     backgroundColor: '#ffffff',
@@ -368,18 +443,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  editButton: {
-    backgroundColor: '#007bff',
-    borderRadius: 5,
-    padding: 10,
-    marginVertical: 10,
-  },
-  editButtonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
   logoutButton: {
     marginTop: 350, // This ensures the button is pushed to the bottom
+  },
+  subjectsContainer: {
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    marginTop: 10,
+  },
+  subjectsHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+  },
+  subjectItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  subjectText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 8,
+  },
+  logoutButton: {
+    marginTop: 20, // Adjust as needed
   },
 });
 
