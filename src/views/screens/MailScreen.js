@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, SafeAreaView, Image, ScrollView, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+  ScrollView,
+  Modal,
+} from 'react-native';
 import axios from 'axios';
 import { launchImageLibrary } from 'react-native-image-picker';
 
@@ -62,7 +73,7 @@ const MailScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Incident Report</Text>
+        <Text style={styles.title}>Report</Text>
 
         <Text style={styles.label}>From</Text>
         <TextInput
@@ -142,13 +153,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9f9f9',
+    padding: 16,
   },
   scrollContent: {
     padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: 'bold',
     color: '#333',
     marginBottom: 20,
     textAlign: 'center',
@@ -168,6 +180,11 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: '#fff',
     color: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
   },
   readOnlyInput: {
     backgroundColor: '#e0e0e0',
@@ -177,11 +194,16 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   fileButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: '#1E293B',
     paddingVertical: 10,
     borderRadius: 5,
     alignItems: 'center',
     marginTop: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   fileButtonText: {
     color: '#fff',
@@ -196,11 +218,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
   },
   sendButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: '#1E293B',
     paddingVertical: 12,
     borderRadius: 5,
     alignItems: 'center',
     marginTop: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   sendButtonText: {
     color: '#fff',
@@ -226,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   closeButtonText: {
-    color: '#1E88E5',
+    color: '#1E293B',
     fontWeight: '600',
   },
 });

@@ -86,14 +86,10 @@ const ChangePinScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const payload = {
-        user_id: storedId, 
+        user_id: storedId,
         old_pin: Number(storedPin), // Ensure old_pin is sent as a number
         new_pin: Number(newPin), // Ensure new_pin is also a number
       };
-
-      // Log the stored PIN and the payload for detailed inspection
-      console.log("Stored PIN:", storedPin);
-      console.log("Payload being sent:", payload);
 
       // Sending PUT request to change the PIN
       const response = await axios.put(
@@ -106,9 +102,6 @@ const ChangePinScreen = ({ navigation }) => {
         }
       );
 
-      // Log the response to see the server's response data
-      console.log("Response from server:", response.data);
-
       Dialog.show({
         type: ALERT_TYPE.SUCCESS,
         title: "SUCCESS",
@@ -118,10 +111,7 @@ const ChangePinScreen = ({ navigation }) => {
 
       navigation.goBack(); // Navigate back after successful change
     } catch (error) {
-      // Log the error response for debugging
       if (error.response) {
-        console.error("Failed to change PIN", error.response.data);
-        // Display the exact error message from the server
         Dialog.show({
           type: ALERT_TYPE.DANGER,
           title: "ERROR",
@@ -131,7 +121,6 @@ const ChangePinScreen = ({ navigation }) => {
           button: "Close",
         });
       } else {
-        console.error("Failed to change PIN", error.message);
         Dialog.show({
           type: ALERT_TYPE.DANGER,
           title: "ERROR",
@@ -192,18 +181,20 @@ const ChangePinScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#f9f9f9",
+    padding: 16,
   },
   svContainer: {
-    paddingTop: -5,
-    paddingHorizontal: 20,
+    flex: 1,
+    marginBottom: 20,
   },
   textTitle: {
-    fontSize: 25,
+    fontSize: 28,
     textAlign: "center",
     fontWeight: "bold",
     color: "#333",
     marginBottom: 10,
+    marginTop: 100,
   },
   textSubtitle: {
     fontSize: 16,
@@ -222,6 +213,11 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     fontSize: 18,
     backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
   },
   errorText: {
     color: "red",
@@ -229,10 +225,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#1E293B",
     paddingVertical: 15,
     borderRadius: 5,
     alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   buttonText: {
     color: "#fff",

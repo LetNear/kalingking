@@ -88,7 +88,7 @@ const ChangePin = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <Loader visible={loading} />
         <ScrollView style={styles.svContainer}>
-          <Text style={styles.textTitle}>VERIFY IF YOU HAVE ACCESS</Text>
+          <Text style={styles.textTitle}>VERIFY YOUR PIN</Text>
           <Text style={styles.textSubtitle}>Enter your 4-digit PIN</Text>
           <View style={styles.viewContainer}>
             <CustomPinInput
@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
     marginBottom: 10,
+    marginTop: 100,
   },
   textSubtitle: {
     fontSize: 16,
