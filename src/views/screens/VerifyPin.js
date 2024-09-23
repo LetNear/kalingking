@@ -5,7 +5,7 @@ import {
   View,
   Text,
   ScrollView,
-  Animated
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -50,13 +50,35 @@ const VerifyPin = ({ navigation }) => {
 
   const retrieveCurrentSchedule = async () => {
     try {
-      const scheduleData = await AsyncStorage.getItem('currentSchedule');
+      const scheduleData = await AsyncStorage.getItem("currentSchedule");
       if (scheduleData) {
         const schedule = JSON.parse(scheduleData);
-        setCurrentSchedule(schedule);
+
+        // Get the current time
+        const currentTime = new Date();
+        const [startHours, startMinutes] = schedule.start_time
+          .split(":")
+          .map(Number);
+        const [endHours, endMinutes] = schedule.end_time
+          .split(":")
+          .map(Number);
+
+        // Create start and end Date objects for comparison
+        const startTime = new Date(currentTime);
+        startTime.setHours(startHours, startMinutes, 0);
+
+        const endTime = new Date(currentTime);
+        endTime.setHours(endHours, endMinutes, 0);
+
+        // Check if the current time is within the schedule
+        if (currentTime >= startTime && currentTime <= endTime) {
+          setCurrentSchedule(schedule);
+        } else {
+          setCurrentSchedule(null); // Clear schedule if not within time range
+        }
       }
     } catch (error) {
-      console.error('Failed to load schedule data', error);
+      console.error("Failed to load schedule data", error);
     }
   };
 
@@ -92,7 +114,7 @@ const VerifyPin = ({ navigation }) => {
         await AsyncStorage.setItem("userData", JSON.stringify(user));
 
         // Navigate to UnlockScreen
-        navigation.navigate('UnlockScreen');
+        navigation.navigate("UnlockScreen");
       } else {
         setError(response.data.message);
         Dialog.show({
@@ -103,11 +125,14 @@ const VerifyPin = ({ navigation }) => {
         });
       }
     } catch (error) {
-      setError(error.response?.data?.message || error.message || 'An error occurred');
+      setError(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
       Dialog.show({
         type: ALERT_TYPE.DANGER,
         title: "ERROR",
-        textBody: error.response?.data?.message || error.message || 'An error occurred',
+        textBody:
+          error.response?.data?.message || error.message || "An error occurred",
         button: "Close",
       });
     } finally {
@@ -127,11 +152,24 @@ const VerifyPin = ({ navigation }) => {
           {currentSchedule && (
             <View style={styles.box}>
               {/* Blinking "Access By" text */}
-              <Animated.Text style={[styles.occupiedText, { opacity }]}>Access By:</Animated.Text>
-              <Text style={styles.scheduleInstructor}>{currentSchedule.instructorName || 'Unknown Instructor'}</Text>
-              <Text style={styles.scheduleTitle}>Course: {currentSchedule.name}</Text>
-              <Text style={styles.scheduleCode}>Code: {currentSchedule.code}</Text>
-              <Text style={styles.scheduleTime}>Time: {formatTime(currentSchedule.start_time)} - {formatTime(currentSchedule.end_time)}</Text>
+              <Animated.Text
+                style={[styles.occupiedText, { opacity }]}
+              >
+                Access By:
+              </Animated.Text>
+              <Text style={styles.scheduleInstructor}>
+                {currentSchedule.instructorName || "Unknown Instructor"}
+              </Text>
+              <Text style={styles.scheduleTitle}>
+                Course: {currentSchedule.name}
+              </Text>
+              <Text style={styles.scheduleCode}>
+                Code: {currentSchedule.code}
+              </Text>
+              <Text style={styles.scheduleTime}>
+                Time: {formatTime(currentSchedule.start_time)} -{" "}
+                {formatTime(currentSchedule.end_time)}
+              </Text>
             </View>
           )}
 
@@ -154,8 +192,8 @@ const VerifyPin = ({ navigation }) => {
 };
 
 const formatTime = (time) => {
-  const [hours, minutes] = time.split(':');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const [hours, minutes] = time.split(":");
+  const ampm = hours >= 12 ? "PM" : "AM";
   const formattedHours = hours % 12 || 12;
   return `${formattedHours}:${minutes} ${ampm}`;
 };
@@ -173,11 +211,11 @@ const styles = StyleSheet.create({
     height: 20,
   },
   box: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     padding: 20,
     borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 15,
   },
   scheduleTitle: {
@@ -207,8 +245,8 @@ const styles = StyleSheet.create({
   },
   occupiedText: {
     fontSize: 30,
-    fontWeight: 'bold',
-    color: '#4CAF50', // Green color for occupied
+    fontWeight: "bold",
+    color: "#4CAF50", // Green color for occupied
     marginBottom: 10,
   },
   textTitle: {
