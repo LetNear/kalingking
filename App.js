@@ -27,6 +27,8 @@ import ScanningChoice from "./src/views/screensStudent/ScanningChoice";
 import VerifyPin from "./src/views/screens/VerifyPin";
 import ChangePin from "./src/views/screens/ChangePin";
 import ChangePinScreen from "./src/views/screens/ChangePinScreen";
+import InstructorDetailsScreen from "./src/views/screens/InstructorDetailsScreen";
+import SubjectDetails from "./src/views/screens/SubjectDetails";
 
 // Define Navigators
 const Stack = createNativeStackNavigator();
@@ -223,16 +225,21 @@ function CustomDrawerContent(props) {
 
       {/* Display the subjects associated with the user */}
       <View style={styles.subjectsContainer}>
-        <Text style={styles.subjectsHeader}>My Courses</Text>
-        {subjects.map(subject => (
-          <View key={subject.id} style={styles.subjectItem}>
-            <Icon name="graduation-cap" size={18} color="#1E88E5" />
-            <Text style={styles.subjectText}>
-              {subject.name} - {subject.code} ({subject.day}, {subject.start_time} - {subject.end_time})
-            </Text>
-          </View>
-        ))}
-      </View>
+  <Text style={styles.subjectsHeader}>My Courses</Text>
+  {subjects.map((subject) => (
+    <TouchableOpacity
+      key={subject.id}
+      style={styles.subjectItem}
+      onPress={() => props.navigation.navigate('SubjectDetails', { subjectId: subject.id })}
+    >
+      <Icon name="graduation-cap" size={18} color="#1E88E5" />
+      <Text style={styles.subjectText}>
+        {subject.name} - {subject.code} ({subject.day}, {subject.start_time} - {subject.end_time})
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
 
       <DrawerItem
         label="Log out"
@@ -395,6 +402,16 @@ function App() {
         <Stack.Screen
           name="ChangePinScreen"
           component={ChangePinScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="InstructorDetailsScreen"
+          component={InstructorDetailsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SubjectDetails"
+          component={SubjectDetails}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

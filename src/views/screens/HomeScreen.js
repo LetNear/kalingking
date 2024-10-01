@@ -35,7 +35,6 @@ const HomeScreen = ({ navigation }) => {
       setCurrentTime(new Date());
     }, 1000);
 
-    // Add animation loop for any UI effects (optional)
     Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -59,18 +58,18 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (matchedSubjects.length > 0) {
-      saveCurrentSchedule(matchedSubjects[0]); // Save the first matching subject
+      saveCurrentSchedule(matchedSubjects[0]);
     } else {
-      saveCurrentSchedule(null); // Clear if no matching subject
+      saveCurrentSchedule(null);
     }
   }, [matchedSubjects]);
 
   const getUserData = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData'); // Ensure 'userData' is the key used here
+      const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const parsedData = JSON.parse(userData);
-        console.log('User Details:', parsedData); // Log to confirm correct parsing
+        console.log('User Details:', parsedData);
         setUserDetails(parsedData);
       } else {
         console.log("No user data found in AsyncStorage.");
@@ -140,18 +139,6 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const fetchInstructors = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('https://lockup.pro/api/instructors');
-      setInstructors(response.data.data || []);
-      setLoading(false);
-    } catch (error) {
-      setError(error);
-      setLoading(false);
-    }
-  };
-
   const formatTime = (time) => {
     const [hours, minutes] = time.split(':');
     const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -188,7 +175,6 @@ const HomeScreen = ({ navigation }) => {
     start.setHours(parseInt(startHours), parseInt(startMinutes), 0);
     end.setHours(parseInt(endHours), parseInt(endMinutes), 0);
 
-    // Check if the current time falls within the start and end time and if the day matches
     return now >= start && now <= end && day === getCurrentDay();
   };
 
@@ -213,7 +199,7 @@ const HomeScreen = ({ navigation }) => {
         return (
           <ScrollView style={styles.scrollableContainer}>
             <Image
-              source={require('../imglogo/ccslogo.png')}
+              source={require('../imglogo/ccslogo.png')} // Placeholder image, update this if needed
               style={styles.image}
             />
             <View style={styles.textContainer}>
@@ -270,18 +256,23 @@ const HomeScreen = ({ navigation }) => {
             ))}
           </ScrollView>
         );
-        case 'People':
-  return (
-    <ScrollView style={styles.scrollableContainer}>
-      {instructors
-        .filter(instructor => instructor.id !== userDetails?.id) // Filter out the logged-in instructor
-        .map(instructor => (
-          <View key={instructor.id} style={styles.instructorContainer}>
-            <Text style={styles.instructorNameText}>{instructor.username}</Text>
-          </View>
-        ))}
-    </ScrollView>
-  );
+
+      case 'People':
+        return (
+          <ScrollView style={styles.scrollableContainer}>
+            {instructors
+              .filter(instructor => instructor.id !== userDetails?.id)
+              .map(instructor => (
+                <TouchableOpacity
+                  key={instructor.id}
+                  style={styles.instructorContainer}
+                  onPress={() => navigation.navigate('InstructorDetailsScreen', { instructor })} // Navigate to InstructorDetailsScreen
+                >
+                  <Text style={styles.instructorNameText}>{instructor.username}</Text>
+                </TouchableOpacity>
+              ))}
+          </ScrollView>
+        );
 
       default:
         return <Text style={styles.contentText}>Welcome to Home Screen</Text>;
@@ -292,7 +283,6 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.welcomeText}>Welcome, </Text>
-        {/* Display username if available, else show 'User' */}
         <Text style={styles.nameText}>{userDetails?.username || 'User'}</Text>
       </View>
       <View style={styles.navbar}>
@@ -306,7 +296,7 @@ const HomeScreen = ({ navigation }) => {
           style={[styles.navButton, selectedButton === 'People' && styles.selectedButton]}
           onPress={() => {
             setSelectedButton('People');
-            fetchInstructors(); // Fetch instructors when People is selected
+            fetchData(); // Fetch instructors when People is selected
           }}
         >
           <Text style={[styles.navButtonText, selectedButton === 'People' && styles.selectedButtonText]}>People</Text>
