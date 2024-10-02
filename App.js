@@ -1,3 +1,5 @@
+//ios 545004980786-7lf1oc9mhvcrjq5dtkusp23277h6c9i3.apps.googleusercontent.com
+
 import * as React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
