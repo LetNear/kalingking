@@ -1,54 +1,74 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  StyleSheet,
-  SafeAreaView,
-  Image,
-  ScrollView,
-  Modal,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, SafeAreaView, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import { launchImageLibrary } from 'react-native-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker'; // Import the picker
 
 const MailScreen = () => {
-  const [to, setTo] = useState('');
-  const [subject, setSubject] = useState('');
+  const [subject, setSubject] = useState(''); // Change from text input to picker value
   const [message, setMessage] = useState('');
   const [fileUri, setFileUri] = useState(null);
   const [fileType, setFileType] = useState('');
-  const [isModalVisible, setIsModalVisible] = useState(false); // State to control modal visibility
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [fromEmail, setFromEmail] = useState('');
+  const [loadingEmail, setLoadingEmail] = useState(true);
+  const toEmail = 'admin@admin.admin'; // Fixed "To" email
 
-  const handleSendReport = () => {
-    const apiUrl = 'https://your-api-url.com/api/send-report';
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const userDetails = await AsyncStorage.getItem('userData'); 
+        if (userDetails) {
+          const parsedDetails = JSON.parse(userDetails);
+          setFromEmail(parsedDetails.email);
+        } else {
+          console.error('User details not found in storage.');
+        }
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+      } finally {
+        setLoadingEmail(false);
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
+
+  const handleSendReport = async () => {
+    const apiUrl = 'https://lockup.pro/api/reports'; 
 
     const formData = new FormData();
-    formData.append('to', to);
+    formData.append('from_email', fromEmail); 
+    formData.append('to_email', toEmail);
     formData.append('subject', subject);
     formData.append('message', message);
 
     if (fileUri) {
-      formData.append('file', {
+      formData.append('attachment', {
         uri: fileUri,
         type: fileType,
         name: fileUri.split('/').pop(),
       });
     }
 
-    axios
-      .post(apiUrl, formData, {
+    try {
+      const response = await axios.post(apiUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      .then(() => {
-        Alert.alert('Success', 'Incident report sent successfully!');
-      })
-      .catch((error) => {
-        Alert.alert('Error', 'Failed to send the incident report. Please try again.');
-        console.error(error);
       });
+
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert('Success', 'Incident report sent successfully!');
+        setSubject('');
+        setMessage('');
+        setFileUri(null);
+      } else {
+        Alert.alert('Error', 'Unexpected response from the server.');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to send the incident report. Please try again.';
+      Alert.alert('Error', errorMessage);
+    }
   };
 
   const handleSelectFile = () => {
@@ -73,33 +93,44 @@ const MailScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Report</Text>
+        <Text style={styles.title}>Incident Report</Text>
 
         <Text style={styles.label}>From</Text>
-        <TextInput
-          style={[styles.input, styles.readOnlyInput]}
-          placeholder="From"
-          value="josecundo@my.cspc.edu.ph"
-          editable={false}
-        />
+        {loadingEmail ? (
+          <ActivityIndicator size="small" color="#1E88E5" />
+        ) : (
+          <TextInput
+            style={[styles.input, styles.readOnlyInput]}
+            placeholder="From"
+            value={fromEmail}
+            editable={false}
+          />
+        )}
 
         <Text style={styles.label}>To</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, styles.readOnlyInput]} 
           placeholder="To"
-          value={to}
-          onChangeText={(text) => setTo(text)}
+          value={toEmail}
+          editable={false}
         />
 
-        <Text style={styles.label}>Subject</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Subject"
-          value={subject}
-          onChangeText={(text) => setSubject(text)}
-        />
+        <Text style={styles.label}>Type</Text>
+        <View style={[styles.input, styles.pickerContainer]}>
+          <Picker
+            selectedValue={subject}
+            onValueChange={(itemValue) => setSubject(itemValue)}
+            style={styles.picker}
+          >
+            <Picker.Item label="Select a Report Type" value="" />
+            <Picker.Item label="Lost and Found" value="Lost and Found" />
+            <Picker.Item label="Missing Paraphernalia" value="Missing Paraphernalia" />
+            <Picker.Item label="Security Breach" value="Security Breach" />
+            <Picker.Item label="Damage Report" value="Damage Report" />
+          </Picker>
+        </View>
 
-        <Text style={styles.label}>Compose Email</Text>
+        <Text style={styles.label}>Compose Report</Text>
         <TextInput
           style={[styles.input, styles.messageInput]}
           placeholder="Compose email"
@@ -128,7 +159,6 @@ const MailScreen = () => {
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
 
-        {/* Modal for enlarged image view */}
         <Modal
           visible={isModalVisible}
           transparent={true}
@@ -192,6 +222,13 @@ const styles = StyleSheet.create({
   messageInput: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    justifyContent: 'center',
+  },
+  picker: {
+    height: '100%',
+    width: '100%',
   },
   fileButton: {
     backgroundColor: '#1E293B',

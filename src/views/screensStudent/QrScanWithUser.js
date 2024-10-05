@@ -14,7 +14,7 @@ const QrScanWithUser = () => {
       const { status } = await BarCodeScanner.requestPermissionsAsync();
       setHasPermission(status === 'granted');
 
-      const user = await AsyncStorage.getItem('user');
+      const user = await AsyncStorage.getItem('userData');
       if (user) {
         const userData = JSON.parse(user);
         setUserId(userData.id);
