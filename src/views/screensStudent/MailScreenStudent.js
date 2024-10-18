@@ -36,6 +36,17 @@ const MailScreenStudent = () => {
   }, []);
 
   const handleSendReport = async () => {
+    // Check if the "Type" and "Message" fields are filled out
+    if (!subject) {
+      Alert.alert('Error', 'Please select a report type.');
+      return;
+    }
+
+    if (!message.trim()) {
+      Alert.alert('Error', 'Please enter a message.');
+      return;
+    }
+
     const apiUrl = 'https://lockup.pro/api/reports'; 
 
     const formData = new FormData();
@@ -44,6 +55,7 @@ const MailScreenStudent = () => {
     formData.append('subject', subject);
     formData.append('message', message);
 
+    // Image is optional, only append if it exists
     if (fileUri) {
       formData.append('attachment', {
         uri: fileUri,

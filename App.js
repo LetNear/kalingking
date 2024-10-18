@@ -139,12 +139,21 @@ function StudentTabNavigator() {
   );
 }
 
+// Helper function to format time in 12-hour format
+const formatTimeTo12Hour = (time24) => {
+  const [hours, minutes] = time24.split(':');
+  const period = +hours >= 12 ? 'PM' : 'AM';
+  const adjustedHours = +hours % 12 || 12; // Convert to 12-hour format
+  return `${adjustedHours}:${minutes} ${period}`;
+};
+
 // Custom Drawer Content
 function CustomDrawerContent(props) {
-  const [userName, setUserName] = React.useState('User');
+  const [userName, setUserName] = React.useState('UserData');
   const [userEmail, setUserEmail] = React.useState('No email available');
   const [profilePic, setProfilePic] = React.useState('https://via.placeholder.com/100'); // Default profile pic
   const [subjects, setSubjects] = React.useState([]); // State to hold subjects
+  const [isInstructor, setIsInstructor] = React.useState(false); // New state to check if user is an instructor
 
   React.useEffect(() => {
     const fetchUserData = async () => {
@@ -153,13 +162,12 @@ function CustomDrawerContent(props) {
         if (userData) {
           const parsedData = JSON.parse(userData);
           if (parsedData) {
-            setUserName(parsedData.name || parsedData.username || 'User');
+            setUserName(parsedData.name || parsedData.username || 'UserData');
             setUserEmail(parsedData.email || 'No email available');
             setProfilePic(parsedData.picture || 'https://via.placeholder.com/100');
-            if (parsedData.role === 'student') {
-              // Fetch subjects if the user is a student
-              fetchStudentSubjects(parsedData.id);
-            } else {
+            setIsInstructor(parsedData.role === 'instructor'); // Set isInstructor based on role
+
+            if (parsedData.role === 'instructor') {
               // Fetch subjects if the user is an instructor
               fetchInstructorSubjects(parsedData.id);
             }
@@ -167,17 +175,6 @@ function CustomDrawerContent(props) {
         }
       } catch (error) {
         console.error("Failed to fetch user data:", error);
-      }
-    };
-
-    // Function to fetch subjects for students
-    const fetchStudentSubjects = async (userId) => {
-      try {
-        const response = await axios.get('https://lockup.pro/api/student-subjects');
-        const userSubjects = response.data.find(student => student.id === userId)?.subjects || [];
-        setSubjects(userSubjects); // Set the fetched subjects for the student
-      } catch (error) {
-        console.error('Failed to fetch student subjects:', error);
       }
     };
 
@@ -192,7 +189,14 @@ function CustomDrawerContent(props) {
       }
     };
 
+    // Fetch user data immediately and set up interval
     fetchUserData();
+    const intervalId = setInterval(() => {
+      fetchUserData(); // Re-fetch every 1 second
+    }, 1000);
+
+    // Clear the interval when the component unmounts
+    return () => clearInterval(intervalId);
   }, []);
 
   // Updated handleLogout to clear all AsyncStorage data
@@ -225,23 +229,24 @@ function CustomDrawerContent(props) {
       </View>
       <DrawerItemList {...props} />
 
-      {/* Display the subjects associated with the user */}
-      <View style={styles.subjectsContainer}>
-  <Text style={styles.subjectsHeader}>My Courses</Text>
-  {subjects.map((subject) => (
-    <TouchableOpacity
-      key={subject.id}
-      style={styles.subjectItem}
-      onPress={() => props.navigation.navigate('SubjectDetails', { subjectId: subject.id })}
-    >
-      <Icon name="graduation-cap" size={18} color="#1E88E5" />
-      <Text style={styles.subjectText}>
-        {subject.name} - {subject.code} ({subject.day}, {subject.start_time} - {subject.end_time})
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
-
+      {/* Display the subjects associated with the instructor only */}
+      {isInstructor && (
+        <View style={styles.subjectsContainer}>
+          <Text style={styles.subjectsHeader}>My Courses</Text>
+          {subjects.map((subject) => (
+            <TouchableOpacity
+              key={subject.id}
+              style={styles.subjectItem}
+              onPress={() => props.navigation.navigate('SubjectDetails', { subjectId: subject.id })}
+            >
+              <Icon name="graduation-cap" size={18} color="#1E88E5" />
+              <Text style={styles.subjectText}>
+                {subject.name} - {subject.code} ({subject.day}, {formatTimeTo12Hour(subject.start_time)} - {formatTimeTo12Hour(subject.end_time)})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <DrawerItem
         label="Log out"
@@ -254,6 +259,9 @@ function CustomDrawerContent(props) {
     </DrawerContentScrollView>
   );
 }
+
+
+
 
 
 
@@ -282,6 +290,16 @@ function DrawerNavigator() {
         }}
       />
       <Drawer.Screen 
+        name="Unlinked Course" // Added Unlinked Course option
+        component={UnlinkSubjectScreen} 
+        options={{ 
+          title: 'Unlinked Course',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="calendar-times-o" color={color} size={size} /> // Using a different icon for Unlinked Course
+          ),
+        }}
+      />
+      <Drawer.Screen 
         name="MailScreen" 
         component={MailScreen} 
         options={{ 
@@ -291,7 +309,7 @@ function DrawerNavigator() {
           ),
         }}
       />
-    <Drawer.Screen 
+      <Drawer.Screen 
         name="ChangePin" 
         component={ChangePin} 
         options={{ 
@@ -304,6 +322,7 @@ function DrawerNavigator() {
     </Drawer.Navigator>
   );
 }
+
 
 // Student Drawer Navigator
 function DrawerNavigatorStudent() {

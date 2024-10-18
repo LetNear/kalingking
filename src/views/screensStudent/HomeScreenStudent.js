@@ -480,32 +480,34 @@ const HomeScreenStudent = ({ navigation }) => {
       </Modal>
 
       <Modal
-        animationType="slide"
-        transparent={true}
-        visible={guidelineModalVisible}
-        onRequestClose={() => setGuidelineModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>{selectedGuideline?.title}</Text>
-            <ScrollView>
-              {selectedGuideline?.image && (
-                <Image 
-                  source={{ uri: `https://lockup.pro/storage/${selectedGuideline.image}` }} 
-                  style={styles.modalImage}
-                />
-              )}
-              <Text style={styles.modalText}>{selectedGuideline?.body}</Text>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setGuidelineModalVisible(false)}
-            >
-              <Text style={styles.modalButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+  animationType="slide"
+  transparent={true}
+  visible={guidelineModalVisible}
+  onRequestClose={() => setGuidelineModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      {/* "X" button in the top-right corner */}
+      <TouchableOpacity onPress={() => setGuidelineModalVisible(false)} style={styles.closeButtonContainer}>
+        <Text style={styles.closeButtonText}>✕</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.modalTitle}>{selectedGuideline?.title}</Text>
+      
+      <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+        {selectedGuideline?.image && (
+          <Image 
+            source={{ uri: `https://lockup.pro/storage/${selectedGuideline.image}` }} 
+            style={styles.modalImage}
+          />
+        )}
+        <Text style={styles.modalText}>{selectedGuideline?.body}</Text>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
+
     </SafeAreaView>
   );
 };
@@ -718,10 +720,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
-    width: '80%',
+    width: '90%',
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
+    marginTop: 30,
   },
   modalTitle: {
     fontSize: 18,
@@ -774,6 +777,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginVertical: 5,
   },
+  scrollContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 20, // Adjust padding if needed
+  },   
+  closeButtonContainer: {
+    position: 'absolute',
+    top: 10, // Position from the top
+    right: 10, // Position from the right
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    borderRadius: 15, // Circular button
+    width: 30, // Width of the button
+    height: 30, // Height of the button
+    justifyContent: 'center', // Center the "X"
+    alignItems: 'center', // Center the "X"
+    zIndex: 1,
+  },
+  
+  closeButtonText: {
+    color: '#fff', // White text color
+    fontSize: 18, // Adjust font size
+    fontWeight: 'bold', // Bold "X"
+  },  
 });
 
-export default HomeScreenStudent;
+export default HomeScreenStudent; 
+

@@ -1,13 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
 import axios from "axios";
 
-const SubjectDetails = ({ route }) => {
+// Helper function to format time in 12-hour format
+const formatTimeTo12Hour = (time24) => {
+  const [hours, minutes] = time24.split(':');
+  const period = +hours >= 12 ? 'PM' : 'AM';
+  const adjustedHours = +hours % 12 || 12; // Convert to 12-hour format
+  return `${adjustedHours}:${minutes} ${period}`;
+};
+
+const SubjectDetails = ({ route, navigation }) => {
   const { subjectId } = route.params; // Subject ID passed from navigation
   const [subject, setSubject] = useState(null);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
-    // Fetch all subjects and filter the one we need
     const fetchSubjectDetails = async () => {
       try {
         const response = await axios.get('https://lockup.pro/api/subjectsNgStudent');
@@ -21,8 +29,10 @@ const SubjectDetails = ({ route }) => {
         } else {
           console.error("Subject not found");
         }
+        setLoading(false); // Set loading to false once data is fetched
       } catch (error) {
         console.error("Failed to fetch subject details:", error);
+        setLoading(false); // Set loading to false if an error occurs
       }
     };
     fetchSubjectDetails();
@@ -30,13 +40,15 @@ const SubjectDetails = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      {subject ? (
+      {loading ? (
+        <ActivityIndicator size="large" color="#6200ea" style={styles.loader} />
+      ) : subject ? (
         <>
           <View style={styles.subjectHeader}>
             <Text style={styles.subjectName}>{subject.name}</Text>
             <Text style={styles.subjectCode}>{subject.code}</Text>
             <Text style={styles.subjectInfo}>
-              {subject.day} ({subject.start_time} - {subject.end_time})
+              {subject.day} ({formatTimeTo12Hour(subject.start_time)} - {formatTimeTo12Hour(subject.end_time)})
             </Text>
             <Text style={styles.subjectSection}>Section: {subject.section}</Text>
           </View>
@@ -57,9 +69,14 @@ const SubjectDetails = ({ route }) => {
           ) : (
             <Text>No students enrolled yet.</Text>
           )}
+
+          {/* Add a back button to navigate back to HomeScreen */}
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Back to Home</Text>
+          </TouchableOpacity>
         </>
       ) : (
-        <Text>Loading...</Text>
+        <Text>Error loading subject details.</Text>
       )}
     </View>
   );
@@ -69,7 +86,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#f9f9f9", // Match the background color with HomeScreen
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   subjectHeader: {
     marginBottom: 20,
@@ -77,6 +99,7 @@ const styles = StyleSheet.create({
   subjectName: {
     fontSize: 22,
     fontWeight: "bold",
+    color: "#333", // Matching text color
   },
   subjectCode: {
     fontSize: 18,
@@ -94,6 +117,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
+    color: "#333", // Matching text color
   },
   studentItem: {
     padding: 10,
@@ -111,6 +135,17 @@ const styles = StyleSheet.create({
   studentEmail: {
     fontSize: 14,
     color: "#666",
+  },
+  backButton: {
+    backgroundColor: '#1E88E5',
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
 

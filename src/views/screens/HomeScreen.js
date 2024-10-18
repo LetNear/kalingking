@@ -8,7 +8,8 @@ import {
   ScrollView, 
   Image, 
   Animated, 
-  SafeAreaView 
+  SafeAreaView, 
+  Modal 
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,12 +25,16 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isModalVisible, setIsModalVisible] = useState(false); 
+  const [selectedSubject, setSelectedSubject] = useState(null); 
+  const [schoolYear, setSchoolYear] = useState(null);
+  const [semester, setSemester] = useState(null);
 
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    getUserData();  // Get user data on mount
-    fetchData();    // Fetch subject/instructor data on mount
+    getUserData();  
+    fetchData();    
     const intervalId = setInterval(fetchData, 1000);
     const timeIntervalId = setInterval(() => {
       setCurrentTime(new Date());
@@ -56,42 +61,25 @@ const HomeScreen = ({ navigation }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (matchedSubjects.length > 0) {
-      saveCurrentSchedule(matchedSubjects[0]);
-    } else {
-      saveCurrentSchedule(null);
-    }
-  }, [matchedSubjects]);
+  const openModal = (subject) => {
+    setSelectedSubject(subject);
+    setIsModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setSelectedSubject(null);
+  };
 
   const getUserData = async () => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const parsedData = JSON.parse(userData);
-        console.log('User Details:', parsedData);
         setUserDetails(parsedData);
-      } else {
-        console.log("No user data found in AsyncStorage.");
       }
     } catch (error) {
       console.error('Failed to load user data', error);
-    }
-  };
-
-  const saveCurrentSchedule = async (subject) => {
-    try {
-      if (subject) {
-        const subjectWithInstructor = {
-          ...subject,
-          instructorName: subjectInstructorMap[subject.id]?.instructorName || 'Unknown Instructor',
-        };
-        await AsyncStorage.setItem('currentSchedule', JSON.stringify(subjectWithInstructor));
-      } else {
-        await AsyncStorage.removeItem('currentSchedule');
-      }
-    } catch (error) {
-      console.error('Failed to save schedule data', error);
     }
   };
 
@@ -100,6 +88,11 @@ const HomeScreen = ({ navigation }) => {
       const subjectsResponse = await axios.get('https://lockup.pro/api/subs');
       const fetchedSubjects = subjectsResponse.data.data || [];
       setSubjects(fetchedSubjects);
+
+      if (fetchedSubjects.length > 0) {
+        setSchoolYear(fetchedSubjects[0].school_year);
+        setSemester(fetchedSubjects[0].semester);
+      }
 
       const subjectIdResponse = await axios.get('https://lockup.pro/api/linkedSubjects');
       const subjectIds = subjectIdResponse.data.data?.map(item => item.subject_id) || [];
@@ -140,11 +133,13 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const formatTime = (time) => {
-    const [hours, minutes] = time.split(':');
+    const [hours, minutes] = time.split(':').map(Number);
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const formattedHours = hours % 12 || 12;
-    return `${formattedHours}:${minutes} ${ampm}`;
+    const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+    return `${formattedHours}:${formattedMinutes} ${ampm}`;
   };
+  
 
   const getCurrentTimeFormatted = () => {
     const hours = currentTime.getHours();
@@ -160,25 +155,17 @@ const HomeScreen = ({ navigation }) => {
     return currentTime.toLocaleDateString('en-US', options);
   };
 
-  const getCurrentDay = () => {
-    return currentTime.toLocaleDateString('en-US', { weekday: 'long' });
-  };
+  // Updated matchingSubjects to filter by day and time range
+  const matchingSubjects = subjects.filter(subject => {
+    const isToday = subject.day === currentTime.toLocaleDateString('en-US', { weekday: 'long' });
+    const currentTimeMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const [startHour, startMinute] = subject.start_time.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMinute;
+    const [endHour, endMinute] = subject.end_time.split(':').map(Number);
+    const endMinutes = endHour * 60 + endMinute;
 
-  const isTimeWithinRange = (startTime, endTime, day) => {
-    const [startHours, startMinutes] = startTime.split(':');
-    const [endHours, endMinutes] = endTime.split(':');
-
-    const start = new Date(currentTime);
-    const end = new Date(currentTime);
-    const now = new Date(currentTime);
-
-    start.setHours(parseInt(startHours), parseInt(startMinutes), 0);
-    end.setHours(parseInt(endHours), parseInt(endMinutes), 0);
-
-    return now >= start && now <= end && day === getCurrentDay();
-  };
-
-  const matchingSubjects = subjects.filter(subject => isTimeWithinRange(subject.start_time, subject.end_time, subject.day));
+    return isToday && currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+  });
 
   if (loading) {
     return <ActivityIndicator size="large" color="#6200ea" style={styles.loader} />;
@@ -188,18 +175,13 @@ const HomeScreen = ({ navigation }) => {
     return <Text style={styles.error}>Error: {error.message}</Text>;
   }
 
-  const groupedSubjects = Object.keys(instructorSubjectMap).map(instructorId => ({
-    instructorName: instructors.find(inst => inst.id === parseInt(instructorId))?.username || 'Unknown Instructor',
-    subjects: instructorSubjectMap[instructorId] || [],
-  }));
-
   const renderContent = () => {
     switch (selectedButton) {
       case 'Overview':
         return (
           <ScrollView style={styles.scrollableContainer}>
             <Image
-              source={require('../imglogo/ccslogo.png')} // Placeholder image, update this if needed
+              source={require('../imglogo/ccslogo.png')} 
               style={styles.image}
             />
             <View style={styles.textContainer}>
@@ -215,13 +197,7 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.subjectCode}>Code: {subject.code}</Text>
                     <Text style={styles.subjectDay}>Every: {subject.day}</Text>
                     <Text style={styles.subjectTime}>Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}</Text>
-                    <Text style={styles.subjectSection}>Section: {subject.section}</Text>
-                    <Text style={styles.subjectDescription}>
-                      {subject.description}
-                      <TouchableOpacity>
-                        <Text style={styles.readMore}> Read more →</Text>
-                      </TouchableOpacity>
-                    </Text>
+                    <Text style={styles.subjectSection}>Section: {subject.section}</Text>                 
                     <Text style={styles.subjectOccupiedBy}>Occupied By: {subjectInstructorMap[subject.id]?.instructorName || 'Unknown Instructor'}</Text>
                   </React.Fragment>
                 ))
@@ -229,29 +205,29 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.noDataText}>No subjects starting at the current time</Text>
               )}
             </View>
+
             <Text style={styles.scheduleText}>MACLAB SCHEDULE</Text>
-            {groupedSubjects.map(group => (
-              <View key={group.instructorName} style={styles.group}>
-                <Text style={styles.instructorHeader}>{group.instructorName}</Text>
-                {group.subjects.length > 0 ? (
-                  group.subjects.map(subject => (
-                    <View key={subject.id} style={styles.subjectContainer}>
-                      <Text style={styles.subjectTitle}>{subject.name}</Text>
-                      <Text style={styles.subjectCode}>Code: {subject.code}</Text>
-                      <Text style={styles.subjectDay}>Every: {subject.day}</Text>
-                      <Text style={styles.subjectTime}>Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}</Text>
-                      <Text style={styles.subjectSection}>Section: {subject.section}</Text>
-                      <Text style={styles.subjectDescription}>
-                        {subject.description}
-                        <TouchableOpacity>
-                          <Text style={styles.readMore}> Read more →</Text>
-                        </TouchableOpacity>
-                      </Text>
+            <Text style={styles.schoolYearText}>School Year: {schoolYear || 'N/A'} | Semester: {semester || 'N/A'}</Text>
+
+            {Object.keys(instructorSubjectMap).map(instructorId => (
+              <View key={instructorId} style={styles.group}>
+                <Text style={styles.instructorHeader}>
+                  {instructors.find(inst => inst.id === parseInt(instructorId))?.username || 'Unknown Instructor'}
+                </Text>
+                {instructorSubjectMap[instructorId].map(subject => (
+                  <View key={subject.id} style={styles.subjectContainer}>
+                    <Text style={styles.subjectTitle}>{subject.name}</Text>
+                    <Text style={styles.subjectCode}>Code: {subject.code}</Text>
+                    <Text style={styles.subjectDay}>Every: {subject.day}</Text>
+                    <Text style={styles.subjectTime}>Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}</Text>
+                    <Text style={styles.subjectSection}>Section: {subject.section}</Text>
+                    <View style={styles.readMoreContainer}>
+                      <TouchableOpacity onPress={() => openModal(subject)}>
+                        <Text style={styles.readMore}> Read more →</Text>
+                      </TouchableOpacity>
                     </View>
-                  ))
-                ) : (
-                  <Text style={styles.noDataText}>No subjects available</Text>
-                )}
+                  </View>
+                ))}
               </View>
             ))}
           </ScrollView>
@@ -266,7 +242,7 @@ const HomeScreen = ({ navigation }) => {
                 <TouchableOpacity
                   key={instructor.id}
                   style={styles.instructorContainer}
-                  onPress={() => navigation.navigate('InstructorDetailsScreen', { instructor })} // Navigate to InstructorDetailsScreen
+                  onPress={() => navigation.navigate('InstructorDetailsScreen', { instructor })} 
                 >
                   <Text style={styles.instructorNameText}>{instructor.username}</Text>
                 </TouchableOpacity>
@@ -290,26 +266,62 @@ const HomeScreen = ({ navigation }) => {
           style={[styles.navButton, selectedButton === 'Overview' && styles.selectedButton]}
           onPress={() => setSelectedButton('Overview')}
         >
-          <Text style={[styles.navButtonText, selectedButton === 'Overview' && styles.selectedButtonText]}>Overview</Text>
+          <Text style={[styles.navButtonText, selectedButton === 'Overview' && styles.selectedButtonText]}>
+            Overview
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navButton, selectedButton === 'People' && styles.selectedButton]}
           onPress={() => {
             setSelectedButton('People');
-            fetchData(); // Fetch instructors when People is selected
+            fetchData(); 
           }}
         >
-          <Text style={[styles.navButtonText, selectedButton === 'People' && styles.selectedButtonText]}>People</Text>
+          <Text style={[styles.navButtonText, selectedButton === 'People' && styles.selectedButtonText]}>
+            Instructors
+          </Text>
         </TouchableOpacity>
       </View>
       {renderContent()}
-      <Animated.View style={[styles.timeContainer, { opacity }]}>
+      <View style={styles.timeContainer}>
         <Text style={styles.dateText}>{getFormattedDate()}</Text>
         <Text style={styles.timeText}>{getCurrentTimeFormatted()}</Text>
-      </Animated.View>
+      </View>
+
+      <Modal
+  animationType="slide"
+  transparent={true}
+  visible={isModalVisible}
+  onRequestClose={closeModal}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <TouchableOpacity onPress={closeModal} style={styles.closeButtonContainer}>
+        <Text style={styles.closeButtonText}>✕</Text>
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {selectedSubject && (
+          <>
+            <Text style={styles.modalTitle}>{selectedSubject.name}</Text>
+            <Text style={styles.modalText}>Code: {selectedSubject.code}</Text>
+            <Text style={styles.modalText}>Day: {selectedSubject.day}</Text>
+            <Text style={styles.modalText}>Time: {formatTime(selectedSubject.start_time)} - {formatTime(selectedSubject.end_time)}</Text>
+            <Text style={styles.modalText}>Section: {selectedSubject.section}</Text>
+            <Text style={styles.modalText}>School Year: {selectedSubject.school_year}</Text>
+            <Text style={styles.modalText}>Semester: {selectedSubject.semester}</Text>
+            <Text style={styles.modalText}>{selectedSubject.description}</Text>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
+
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -410,6 +422,14 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
+  schoolYearText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 10,
+  },
   group: {
     marginBottom: 20,
   },
@@ -447,9 +467,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  subjectDescription: {
-    fontSize: 14,
-    color: '#666',
+  readMoreContainer: {
+    alignItems: 'flex-end',
   },
   readMore: {
     fontSize: 14,
@@ -480,7 +499,7 @@ const styles = StyleSheet.create({
   occupiedText: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#4CAF50', // Green color
+    color: '#4CAF50', 
     marginBottom: 1,
   },
   timeContainer: {
@@ -489,6 +508,10 @@ const styles = StyleSheet.create({
     right: 10,
   },
   dateText: {
+    fontSize: 18,
+    color: '#666',
+  },
+  timeText: {
     fontSize: 18,
     color: '#666',
   },
@@ -503,6 +526,58 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollViewContent: {
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  closeButton: {
+    fontSize: 18,
+    color: '#1E88E5',
+    marginTop: 20,
+  }, 
+  closeButtonContainer: {
+    position: 'absolute',
+    top: 10, // Position from the top
+    right: 10, // Position from the right
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    borderRadius: 15, // Circular button
+    width: 30, // Adjust size of the button
+    height: 30, // Adjust size of the button
+    justifyContent: 'center', // Center the X
+    alignItems: 'center', // Center the X
+    zIndex: 1,
+  },
+  
+  closeButtonText: {
+    color: '#fff', // White text for the X
+    fontSize: 20, // Size of the X
+    fontWeight: 'bold', // Make it bold
+  },  
+  
 });
 
 export default HomeScreen;

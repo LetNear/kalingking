@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import axios from 'axios';
 
 const InstructorDetailsScreen = ({ route }) => {
-  const { instructor } = route.params; // Get the passed instructor data
+  const { instructor } = route.params;
   const [instructorData, setInstructorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false); 
+  const [selectedSubject, setSelectedSubject] = useState(null); 
 
   useEffect(() => {
     fetchInstructorData();
@@ -17,7 +19,6 @@ const InstructorDetailsScreen = ({ route }) => {
       const response = await axios.get('https://lockup.pro/api/instructors-subs-linked');
       const instructorsList = response.data || [];
 
-      // Find the instructor by ID
       const instructorDetails = instructorsList.find(inst => inst.id === instructor.id);
 
       if (instructorDetails) {
@@ -32,8 +33,25 @@ const InstructorDetailsScreen = ({ route }) => {
     }
   };
 
+  const openModal = (subject) => {
+    setSelectedSubject(subject);
+    setIsModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setSelectedSubject(null);
+  };
+
+  const formatTime = (time) => {
+    const [hours, minutes] = time.split(':');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12;
+    return `${formattedHours}:${minutes} ${ampm}`;
+  };
+
   if (loading) {
-    return <Text style={styles.loadingText}>Loading...</Text>;
+    return <ActivityIndicator size="large" color="#6200ea" style={styles.loader} />;
   }
 
   if (error) {
@@ -45,58 +63,102 @@ const InstructorDetailsScreen = ({ route }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.instructorName}>{instructorData.username}</Text>
-      <Text style={styles.header}>Subjects:</Text>
-      {instructorData.subjects && instructorData.subjects.length > 0 ? (
-        instructorData.subjects.map(subject => (
-          <View key={subject.id} style={styles.subjectContainer}>
-            <Text style={styles.subjectTitle}>{subject.name}</Text>
-            <Text style={styles.subjectCode}>Code: {subject.code}</Text>
-            <Text style={styles.subjectDay}>Day: {subject.day}</Text>
-            <Text style={styles.subjectTime}>
-              Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}
-            </Text>
-            <Text style={styles.subjectSection}>Section: {subject.section}</Text>
-            <Text style={styles.subjectDescription}>{subject.description}</Text>
-          </View>
-        ))
-      ) : (
-        <Text style={styles.noDataText}>No subjects found for this instructor.</Text>
-      )}
-    </ScrollView>
-  );
-};
+    <View style={styles.container}>
+      <ScrollView>
+        <Text style={styles.instructorName}>{instructorData.username}</Text>
+        <Text style={styles.instructorEmail}>{instructorData.email}</Text> 
+        <Text style={styles.header}>
+          Courses <Text style={styles.lightText}>({instructorData.school_year}/{instructorData.semester})</Text>
+        </Text>
+        {instructorData.subjects && instructorData.subjects.length > 0 ? (
+          instructorData.subjects.map(subject => (
+            <View key={subject.id} style={styles.subjectContainer}>
+              <Text style={styles.subjectTitle}>{subject.name}</Text>
+              <Text style={styles.subjectCode}>Code: {subject.code}</Text>
+              <Text style={styles.subjectDay}>Day: {subject.day}</Text>
+              <Text style={styles.subjectTime}>
+                Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}
+              </Text>
+              <Text style={styles.subjectSection}>Section: {subject.section}</Text>
+              <TouchableOpacity onPress={() => openModal(subject)}>
+                <Text style={styles.readMore}>Read more →</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.noDataText}>No subjects found for this instructor.</Text>
+        )}
+      </ScrollView>
 
-const formatTime = (time) => {
-  const [hours, minutes, seconds] = time.split(':');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const formattedHours = hours % 12 || 12;
-  return `${formattedHours}:${minutes} ${ampm}`;
+      <Modal
+  animationType="slide"
+  transparent={true}
+  visible={isModalVisible}
+  onRequestClose={closeModal}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <TouchableOpacity onPress={closeModal} style={styles.closeButtonContainer}>
+        <Text style={styles.closeButtonText}>✕</Text>
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {selectedSubject && (
+          <>
+            <Text style={styles.modalTitle}>{selectedSubject.name}</Text>
+            <Text style={styles.modalText}>Code: {selectedSubject.code}</Text>
+            <Text style={styles.modalText}>Day: {selectedSubject.day}</Text>
+            <Text style={styles.modalText}>
+              Time: {formatTime(selectedSubject.start_time)} - {formatTime(selectedSubject.end_time)}
+            </Text>
+            <Text style={styles.modalText}>Section: {selectedSubject.section}</Text>
+            <Text style={styles.modalText}>School Year: {selectedSubject.school_year}</Text>
+            <Text style={styles.modalText}>Semester: {selectedSubject.semester}</Text>
+            <Text style={styles.modalText}>{selectedSubject.description}</Text>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: '#f9f9f9',
   },
   instructorName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 35,
+    fontWeight: '700',
+    marginBottom: 5, 
     color: '#333',
+  },
+  instructorEmail: { 
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 20,
   },
   header: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 10,
     color: '#333',
   },
+  lightText: {
+    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+  },
   subjectContainer: {
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#e0e0e0',
+    padding: 20,
     borderRadius: 10,
+    marginBottom: 20,
+    elevation: 3,
   },
   subjectTitle: {
     fontSize: 18,
@@ -106,32 +168,37 @@ const styles = StyleSheet.create({
   subjectCode: {
     fontSize: 16,
     color: '#666',
+    marginTop: 5,
   },
   subjectDay: {
     fontSize: 16,
     color: '#666',
+    marginTop: 5,
   },
   subjectTime: {
     fontSize: 16,
     color: '#666',
+    marginTop: 5,
   },
   subjectSection: {
     fontSize: 16,
     color: '#666',
+    marginTop: 5,
   },
-  subjectDescription: {
+  readMore: {
     fontSize: 16,
-    color: '#666',
+    color: '#1E88E5',
+    marginTop: 5,
   },
   noDataText: {
     fontSize: 16,
     color: '#333',
-  },
-  loadingText: {
-    flex: 1,
     textAlign: 'center',
-    marginTop: 20,
-    fontSize: 18,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
     flex: 1,
@@ -140,6 +207,57 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'red',
   },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollViewContent: {
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  closeButton: {
+    fontSize: 18,
+    color: '#1E88E5',
+    marginTop: 20,
+  },
+  closeButtonContainer: {
+    position: 'absolute',
+    top: 10, // Position from the top
+    right: 10, // Position from the right
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    borderRadius: 15, // Circular button
+    width: 30, // Adjust size of the button
+    height: 30, // Adjust size of the button
+    justifyContent: 'center', // Center the X
+    alignItems: 'center', // Center the X
+    zIndex: 1,
+  },
+  
+  closeButtonText: {
+    color: '#fff', // White text for the X
+    fontSize: 20, // Size of the X
+    fontWeight: 'bold', // Make it bold
+  },  
 });
 
 export default InstructorDetailsScreen;

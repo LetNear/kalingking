@@ -65,7 +65,7 @@ const ScanningChoice = ({ navigation }) => {
             styles.buttonText,
             selectedButton === 'QrScanner' && styles.selectedButtonText,
           ]}>
-            Scan QR Code
+            Scan QR Code For Attendance
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -79,7 +79,7 @@ const ScanningChoice = ({ navigation }) => {
             styles.buttonText,
             selectedButton === 'QrScanWithUser' && styles.selectedButtonText,
           ]}>
-            Scan with User ID
+            Scan with Mac QR Code
           </Text>
         </TouchableOpacity>
       </View>
