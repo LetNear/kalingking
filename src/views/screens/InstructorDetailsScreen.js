@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons'; // Import Ionicons from vector icons
 import axios from 'axios';
 
 const InstructorDetailsScreen = ({ route }) => {
@@ -9,6 +11,7 @@ const InstructorDetailsScreen = ({ route }) => {
   const [error, setError] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false); 
   const [selectedSubject, setSelectedSubject] = useState(null); 
+  const navigation = useNavigation(); // Use navigation hook
 
   useEffect(() => {
     fetchInstructorData();
@@ -64,7 +67,17 @@ const InstructorDetailsScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView>
+      {/* Back and Home Buttons Container */}
+      <View style={styles.navigationContainer}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+          <Icon name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('DrawerNavigator')} style={styles.iconButton}>
+          <Icon name="home" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.instructorName}>{instructorData.username}</Text>
         <Text style={styles.instructorEmail}>{instructorData.email}</Text> 
         <Text style={styles.header}>
@@ -91,36 +104,35 @@ const InstructorDetailsScreen = ({ route }) => {
       </ScrollView>
 
       <Modal
-  animationType="slide"
-  transparent={true}
-  visible={isModalVisible}
-  onRequestClose={closeModal}
->
-  <View style={styles.modalContainer}>
-    <View style={styles.modalContent}>
-      <TouchableOpacity onPress={closeModal} style={styles.closeButtonContainer}>
-        <Text style={styles.closeButtonText}>✕</Text>
-      </TouchableOpacity>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {selectedSubject && (
-          <>
-            <Text style={styles.modalTitle}>{selectedSubject.name}</Text>
-            <Text style={styles.modalText}>Code: {selectedSubject.code}</Text>
-            <Text style={styles.modalText}>Day: {selectedSubject.day}</Text>
-            <Text style={styles.modalText}>
-              Time: {formatTime(selectedSubject.start_time)} - {formatTime(selectedSubject.end_time)}
-            </Text>
-            <Text style={styles.modalText}>Section: {selectedSubject.section}</Text>
-            <Text style={styles.modalText}>School Year: {selectedSubject.school_year}</Text>
-            <Text style={styles.modalText}>Semester: {selectedSubject.semester}</Text>
-            <Text style={styles.modalText}>{selectedSubject.description}</Text>
-          </>
-        )}
-      </ScrollView>
-    </View>
-  </View>
-</Modal>
-
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={closeModal} style={styles.closeButtonContainer}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+            <ScrollView contentContainerStyle={styles.scrollViewContent}>
+              {selectedSubject && (
+                <>
+                  <Text style={styles.modalTitle}>{selectedSubject.name}</Text>
+                  <Text style={styles.modalText}>Code: {selectedSubject.code}</Text>
+                  <Text style={styles.modalText}>Day: {selectedSubject.day}</Text>
+                  <Text style={styles.modalText}>
+                    Time: {formatTime(selectedSubject.start_time)} - {formatTime(selectedSubject.end_time)}
+                  </Text>
+                  <Text style={styles.modalText}>Section: {selectedSubject.section}</Text>
+                  <Text style={styles.modalText}>School Year: {selectedSubject.school_year}</Text>
+                  <Text style={styles.modalText}>Semester: {selectedSubject.semester}</Text>
+                  <Text style={styles.modalText}>{selectedSubject.description}</Text>
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -128,13 +140,27 @@ const InstructorDetailsScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#f9f9f9',
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1,
+  },
+  iconButton: {
+    padding: 10,
+    marginRight: 280,
+  },
+  scrollContainer: {
+    paddingTop: 60, // Adjusts for back button space
+    paddingHorizontal: 16,
   },
   instructorName: {
     fontSize: 35,
     fontWeight: '700',
-    marginBottom: 5, 
+    marginBottom: 5,
     color: '#333',
   },
   instructorEmail: { 
@@ -164,26 +190,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
-  },
-  subjectCode: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
-  subjectDay: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
-  subjectTime: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
-  subjectSection: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
   },
   readMore: {
     fontSize: 16,
@@ -235,29 +241,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
   },
-  closeButton: {
-    fontSize: 18,
-    color: '#1E88E5',
-    marginTop: 20,
-  },
   closeButtonContainer: {
     position: 'absolute',
-    top: 10, // Position from the top
-    right: 10, // Position from the right
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
-    borderRadius: 15, // Circular button
-    width: 30, // Adjust size of the button
-    height: 30, // Adjust size of the button
-    justifyContent: 'center', // Center the X
-    alignItems: 'center', // Center the X
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1,
   },
-  
   closeButtonText: {
-    color: '#fff', // White text for the X
-    fontSize: 20, // Size of the X
-    fontWeight: 'bold', // Make it bold
-  },  
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
 });
 
-export default InstructorDetailsScreen;
+export default InstructorDetailsScreen; 

@@ -1,4 +1,3 @@
-// Existing imports remain the same
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
@@ -16,7 +15,6 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Add new state for student data
 const HomeScreenStudent = ({ navigation }) => {
   const [userDetails, setUserDetails] = useState(null);
   const [selectedButton, setSelectedButton] = useState('Overview');
@@ -36,16 +34,15 @@ const HomeScreenStudent = ({ navigation }) => {
   const [labGuidelines, setLabGuidelines] = useState([]); 
   const [enrolmentKey, setEnrolmentKey] = useState('');
   const [selectedSubject, setSelectedSubject] = useState(null); 
-  const [studentData, setStudentData] = useState(null); // New state to hold fetched student data
+  const [studentData, setStudentData] = useState(null);
 
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    getUserData(); // Fetch user data on component mount
+    getUserData(); 
     fetchLabGuidelines();
-    fetchStudentData(); // Fetch data from the student API
+    fetchStudentData(); 
 
-    // Fetch data and update current time every second
     const fetchInterval = setInterval(() => {
       fetchData();
     }, 1000);
@@ -69,7 +66,6 @@ const HomeScreenStudent = ({ navigation }) => {
       ])
     ).start();
 
-    // Cleanup intervals on component unmount
     return () => {
       clearInterval(fetchInterval);
       clearInterval(timeInterval);
@@ -86,21 +82,16 @@ const HomeScreenStudent = ({ navigation }) => {
 
   const getUserData = async () => {
     try {
-      // Ensure the key used here matches the one used when storing the data
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const parsedData = JSON.parse(userData);
-        console.log('Retrieved Student Data:', parsedData); // Log to confirm correct retrieval
         setUserDetails(parsedData);
-      } else {
-        console.log("No user data found in AsyncStorage for student.");
       }
     } catch (error) {
       console.error('Failed to load user data', error);
     }
   };
 
-  // New function to fetch student data from API and compare with stored user data
   const fetchStudentData = async () => {
     try {
       const userData = await AsyncStorage.getItem('userData');
@@ -110,11 +101,9 @@ const HomeScreenStudent = ({ navigation }) => {
       const response = await axios.get('https://lockup.pro/api/student-subjects');
       const students = response.data;
 
-      // Find the student data that matches the stored user ID
       const matchedStudent = students.find(student => student.id === storedUser.id);
 
       if (matchedStudent) {
-        console.log('Matched Student Data:', matchedStudent);
         setStudentData(matchedStudent);
       }
     } catch (error) {
@@ -150,8 +139,7 @@ const HomeScreenStudent = ({ navigation }) => {
   const fetchData = async () => {
     try {
       const subjectsResponse = await axios.get('https://lockup.pro/api/subs');
-      const fetchedSubjects = subjectsResponse.data.data || [];
-      setSubjects(fetchedSubjects);
+      let fetchedSubjects = subjectsResponse.data.data || [];
 
       const subjectIdResponse = await axios.get('https://lockup.pro/api/linkedSubjects');
       const subjectIds = subjectIdResponse.data.data?.map(item => item.subject_id) || [];
@@ -180,6 +168,11 @@ const HomeScreenStudent = ({ navigation }) => {
       });
 
       setSubjectInstructorMap(subjectInstructorMap);
+
+      if (studentData && studentData.subjects) {
+        const enrolledSubjectIds = studentData.subjects.map(subject => subject.id);
+        fetchedSubjects = fetchedSubjects.filter(subject => !enrolledSubjectIds.includes(subject.id));
+      }
 
       const filteredSubjects = fetchedSubjects.filter(subject => subjectIds.includes(subject.id));
       setMatchedSubjects(filteredSubjects);
@@ -251,24 +244,44 @@ const HomeScreenStudent = ({ navigation }) => {
         return (
           <ScrollView style={styles.scrollableContainer}>
             <Text style={styles.guidelinesText}>Laboratory Guidelines</Text>
-
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScrollView}>
               {renderLabGuidelines()} 
             </ScrollView>
             <Text style={styles.subTitleText}>Access Course</Text>
 
-            {/* Display student subjects if student data exists */}
             {studentData && studentData.subjects.length > 0 && (
               <View style={styles.subjectContainer}>
                 {studentData.subjects.map((subject) => (
-                  <View key={subject.id} style={styles.courseDetail}>
-                    <Text style={styles.subjectTitle}>Name: {subject.name}</Text>
-                    <Text>Code: {subject.code}</Text>
-                    <Text>Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}</Text>
-                    <Text>Section: {subject.section}</Text>
-                    <Text>Day: {subject.day}</Text>
-                    <Text>School Year: {subject.school_year}</Text>
-                    <Text>Semester: {subject.semester}</Text>
+                  <View key={subject.id} style={styles.courseCard}>
+                    <Text style={styles.subjectTitle}>{subject.name}</Text>
+                    <View style={styles.subjectDetails}>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>📚 Code:</Text>
+                        <Text style={styles.detailText}>{subject.code}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>⏰ Time:</Text>
+                        <Text style={styles.detailText}>
+                          {formatTime(subject.start_time)} - {formatTime(subject.end_time)}
+                        </Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>📅 Day:</Text>
+                        <Text style={styles.detailText}>{subject.day}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>🏫 Section:</Text>
+                        <Text style={styles.detailText}>{subject.section}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>🎓 School Year:</Text>
+                        <Text style={styles.detailText}>{subject.school_year}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>📖 Semester:</Text>
+                        <Text style={styles.detailText}>{subject.semester}</Text>
+                      </View>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -276,20 +289,23 @@ const HomeScreenStudent = ({ navigation }) => {
           </ScrollView>
         );
       case 'People':
+        const enrolledSubjectIds = studentData?.subjects?.map(subject => subject.id) || [];
+
         const filteredGroupedSubjects = groupedSubjects
           .map(group => {
             const filteredSubjects = group.subjects.filter(subject =>
+              !enrolledSubjectIds.includes(subject.id) &&
               subject.name?.toLowerCase().includes(searchQuery.toLowerCase())
             );
+
             if (group.instructorName?.toLowerCase().includes(searchQuery.toLowerCase())) {
               return {
                 ...group,
-                subjects: group.subjects,
+                subjects: filteredSubjects,
               };
             }
-            return filteredSubjects.length > 0
-              ? { ...group, subjects: filteredSubjects }
-              : null;
+
+            return filteredSubjects.length > 0 ? { ...group, subjects: filteredSubjects } : null;
           })
           .filter(group => group !== null);
 
@@ -309,18 +325,28 @@ const HomeScreenStudent = ({ navigation }) => {
                 <Text style={styles.instructorHeader}>{group.instructorName}</Text>
                 {group.subjects.length > 0 ? (
                   group.subjects.map(subject => (
-                    <View key={subject.id} style={styles.subjectContainer}>
+                    <View key={subject.id} style={styles.courseCard}>
                       <Text style={styles.subjectTitle}>{subject.name || 'Unknown Subject'}</Text>
-                      <Text style={styles.subjectCode}>Code: {subject.code || 'N/A'}</Text>
-                      <Text style={styles.subjectDay}>Every: {subject.day || 'Unknown Day'}</Text>
-                      <Text style={styles.subjectTime}>Time: {formatTime(subject.start_time)} - {formatTime(subject.end_time)}</Text>
-                      <Text style={styles.subjectSection}>Section: {subject.section || 'N/A'}</Text>
-                      <Text style={styles.subjectDescription}>
-                        {subject.description || 'No description available'}
-                        <TouchableOpacity>
-                          <Text style={styles.readMore}> Read more →</Text>
-                        </TouchableOpacity>
-                      </Text>
+                      <View style={styles.subjectDetails}>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>📚 Code:</Text>
+                          <Text style={styles.detailText}>{subject.code || 'N/A'}</Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>⏰ Time:</Text>
+                          <Text style={styles.detailText}>
+                            {formatTime(subject.start_time)} - {formatTime(subject.end_time)}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>📅 Day:</Text>
+                          <Text style={styles.detailText}>{subject.day || 'Unknown Day'}</Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>🏫 Section:</Text>
+                          <Text style={styles.detailText}>{subject.section || 'N/A'}</Text>
+                        </View>
+                      </View>
                       <TouchableOpacity 
                         style={styles.enrollButton}
                         onPress={() => handleEnroll(subject)}
@@ -382,7 +408,6 @@ const HomeScreenStudent = ({ navigation }) => {
       const user = JSON.parse(userData);
 
       if (!user || !user.id) {
-        console.log('User data:', user); 
         Alert.alert('Error', 'User not found or invalid user data.');
         return;
       }
@@ -392,13 +417,15 @@ const HomeScreenStudent = ({ navigation }) => {
         subject_id: matchedSubject.id,  
       };
 
-      console.log('Enrollment postData:', postData); 
-
       const postResponse = await axios.post('https://lockup.pro/api/student-subjects', postData);
 
-      console.log('API response:', postResponse.data); 
-
       if (postResponse.data.status === 'success') {
+        const updatedStudentData = {
+          ...studentData,
+          subjects: [...studentData.subjects, matchedSubject],
+        };
+
+        setStudentData(updatedStudentData); 
         Alert.alert('Success', 'Student successfully associated with the subject.');
       } else {
         Alert.alert('Error', 'Failed to enroll in the subject.');
@@ -417,7 +444,6 @@ const HomeScreenStudent = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.welcomeText}>Welcome, </Text>
-        {/* Display the name or username based on what's available in the user data */}
         <Text style={styles.nameText}>{userDetails?.name || userDetails?.username || 'User'}</Text>
       </View>
       <View style={styles.navbar}>
@@ -480,39 +506,36 @@ const HomeScreenStudent = ({ navigation }) => {
       </Modal>
 
       <Modal
-  animationType="slide"
-  transparent={true}
-  visible={guidelineModalVisible}
-  onRequestClose={() => setGuidelineModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      {/* "X" button in the top-right corner */}
-      <TouchableOpacity onPress={() => setGuidelineModalVisible(false)} style={styles.closeButtonContainer}>
-        <Text style={styles.closeButtonText}>✕</Text>
-      </TouchableOpacity>
+        animationType="slide"
+        transparent={true}
+        visible={guidelineModalVisible}
+        onRequestClose={() => setGuidelineModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity onPress={() => setGuidelineModalVisible(false)} style={styles.closeButtonContainer}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
 
-      <Text style={styles.modalTitle}>{selectedGuideline?.title}</Text>
-      
-      <ScrollView contentContainerStyle={styles.scrollContentContainer}>
-        {selectedGuideline?.image && (
-          <Image 
-            source={{ uri: `https://lockup.pro/storage/${selectedGuideline.image}` }} 
-            style={styles.modalImage}
-          />
-        )}
-        <Text style={styles.modalText}>{selectedGuideline?.body}</Text>
-      </ScrollView>
-    </View>
-  </View>
-</Modal>
-
-
+            <Text style={styles.modalTitle}>{selectedGuideline?.title}</Text>
+            
+            <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+              {selectedGuideline?.image && (
+                <Image 
+                  source={{ uri: `https://lockup.pro/storage/${selectedGuideline.image}` }} 
+                  style={styles.modalImage}
+                />
+              )}
+              <Text style={styles.modalText}>{selectedGuideline?.body}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-// Existing styles remain unchanged
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -623,6 +646,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingLeft: 15,
     marginBottom: 20,
+    fontSize: 16,
   },
   group: {
     marginBottom: 20,
@@ -633,41 +657,51 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
   },
-  subjectContainer: {
+  courseCard: {
     backgroundColor: '#fff',
     padding: 15,
     borderRadius: 10,
-    elevation: 2,
-    marginBottom: 10,
+    elevation: 3,
+    marginBottom: 15,
+    borderColor: '#ddd',
+    borderWidth: 1,
+  },
+  subjectDetails: {
+    marginVertical: 10,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  detailLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 5,
+  },
+  detailText: {
+    fontSize: 16,
+    color: '#555',
+  },
+  enrollButton: {
+    backgroundColor: '#1E88E5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    elevation: 3,
+  },
+  enrollButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
   subjectTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#333',
-  },
-  subjectCode: {
-    fontSize: 14,
-    color: '#666',
-  },
-  subjectDay: {
-    fontSize: 14,
-    color: '#666',
-  },
-  subjectTime: {
-    fontSize: 14,
-    color: '#666',
-  },
-  subjectSection: {
-    fontSize: 14,
-    color: '#666',
-  },
-  subjectDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  readMore: {
-    fontSize: 14,
-    color: '#1E88E5',
+    marginBottom: 5,
   },
   noDataText: {
     fontSize: 14,
@@ -675,17 +709,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
   },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  error: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    color: 'red',
-    fontSize: 18,
+  subTitleText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    marginTop: 5,
+    textAlign: 'left',
   },
   timeContainer: {
     position: 'absolute',
@@ -699,19 +729,6 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 18,
     color: '#333',
-  },
-  enrollButton: {
-    backgroundColor: '#1E88E5',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  enrollButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -763,43 +780,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  subTitleText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-    marginTop: 5,
-    textAlign: 'left',
-  },
-  courseDetail: {
-    backgroundColor: '#f2f2f2',
-    padding: 10,
-    borderRadius: 8,
-    marginVertical: 5,
-  },
   scrollContentContainer: {
     flexGrow: 1,
-    paddingBottom: 20, // Adjust padding if needed
-  },   
+    paddingBottom: 20,
+  },
   closeButtonContainer: {
     position: 'absolute',
-    top: 10, // Position from the top
-    right: 10, // Position from the right
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
-    borderRadius: 15, // Circular button
-    width: 30, // Width of the button
-    height: 30, // Height of the button
-    justifyContent: 'center', // Center the "X"
-    alignItems: 'center', // Center the "X"
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1,
   },
-  
   closeButtonText: {
-    color: '#fff', // White text color
-    fontSize: 18, // Adjust font size
-    fontWeight: 'bold', // Bold "X"
-  },  
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });
 
-export default HomeScreenStudent; 
-
+export default HomeScreenStudent;
